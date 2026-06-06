@@ -1,0 +1,371 @@
+@import "tailwindcss";
+
+@theme {
+  --color-retro-blue-dark: #105289;
+  --color-retro-blue-light: #3b5998;
+  --color-retro-bg: #d1e1f0;
+  --color-retro-panel: #ffffff;
+  --color-retro-border: #a1b7cd;
+  --color-retro-text: #333333;
+  --color-retro-muted: #666666;
+  --color-retro-accent: #e6eff6;
+}
+
+/* Custom CSS variables for light/dark theme states */
+:root {
+  --retro-bg: #d1e1f0;
+  --retro-panel: #ffffff;
+  --retro-border: #a1b7cd;
+  --retro-text: #333333;
+  --retro-muted: #666666;
+  --retro-row-alt: #f4f8fb;
+  --retro-row-hover: #e3effa;
+  
+  --gloss-gradient: linear-gradient(to bottom, #105289 0%, #0a3a63 100%);
+  --gloss-border: #0e4471;
+  --gloss-text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+
+  --btn-gradient: linear-gradient(to bottom, #4a90e2 0%, #357abd 100%);
+  --btn-border: #1c4b80;
+  --btn-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.4), 0px 1px 2px rgba(0, 0, 0, 0.15);
+
+  --btn-green-gradient: linear-gradient(to bottom, #66b85c 0%, #4b9e41 100%);
+  --btn-green-border: #2e6128;
+}
+
+.dark {
+  --retro-bg: #151d26;
+  --retro-panel: #1b2631;
+  --retro-border: #2c3e50;
+  --retro-text: #e8e6e3;
+  --retro-muted: #8899a6;
+  --retro-row-alt: #1a2530;
+  --retro-row-hover: #223141;
+
+  --gloss-gradient: linear-gradient(to bottom, #1f2c39 0%, #0f161c 100%);
+  --gloss-border: #2c3e50;
+  --gloss-text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.9);
+
+  --btn-gradient: linear-gradient(to bottom, #2b3a4a 0%, #1c2733 100%);
+  --btn-border: #0f171e;
+  --btn-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.3);
+
+  --btn-green-gradient: linear-gradient(to bottom, #2d703e 0%, #1e4d2a 100%);
+  --btn-green-border: #0d2615;
+}
+
+body {
+  background-color: var(--retro-bg);
+  color: var(--retro-text);
+  font-family: Tahoma, Verdana, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 2010 Era Box Container Shadows & Layouts */
+.board-container {
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--retro-border);
+  background-color: var(--retro-panel);
+}
+
+/* Glossy headers phpBB style */
+.glossy-header {
+  background: var(--gloss-gradient);
+  border: 1px solid var(--gloss-border);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  text-shadow: var(--gloss-text-shadow);
+  color: #ffffff;
+  font-weight: bold;
+  padding: 8px 12px;
+  box-shadow: inset 0px 1px 0px rgba(255, 255, 255, 0.25);
+}
+
+.glossy-header-sub {
+  background: linear-gradient(to bottom, #eef5fb 0%, #dbe8f5 100%);
+  border: 1px solid var(--retro-border);
+  color: #105289;
+  font-weight: bold;
+  padding: 6px 10px;
+}
+.dark .glossy-header-sub {
+  background: linear-gradient(to bottom, #202d3c 0%, #17212c 100%);
+  color: #4a90e2;
+  border-color: var(--retro-border);
+}
+
+/* Glossy buttons */
+.retro-btn {
+  background: var(--btn-gradient);
+  border: 1px solid var(--btn-border);
+  box-shadow: var(--btn-shadow);
+  color: #ffffff !important;
+  font-weight: bold;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 4px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.1s ease;
+}
+.retro-btn:hover {
+  filter: brightness(1.08);
+}
+.retro-btn:active {
+  box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.25);
+  filter: brightness(0.95);
+}
+
+.retro-btn-green {
+  background: var(--btn-green-gradient);
+  border: 1px solid var(--btn-green-border);
+  box-shadow: var(--btn-shadow);
+  color: #ffffff !important;
+  font-weight: bold;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 4px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.1s ease;
+}
+.retro-btn-green:hover {
+  filter: brightness(1.08);
+}
+.retro-btn-green:active {
+  box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.25);
+  filter: brightness(0.95);
+}
+
+.retro-btn-gray {
+  background: linear-gradient(to bottom, #ffffff 0%, #e6e6e6 100%);
+  border: 1px solid #adadad;
+  box-shadow: inset 0px 1px 0px #ffffff;
+  color: #333333 !important;
+  font-weight: bold;
+  text-shadow: none;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 4px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.retro-btn-gray:hover {
+  background: linear-gradient(to bottom, #f2f2f2 0%, #d9d9d9 100%);
+}
+.dark .retro-btn-gray {
+  background: linear-gradient(to bottom, #2b3846 0%, #1c2530 100%);
+  border-color: #3e5268;
+  color: #e8e6e3 !important;
+  box-shadow: none;
+}
+.dark .retro-btn-gray:hover {
+  background: linear-gradient(to bottom, #324252 0%, #202b38 100%);
+}
+
+/* Forum Table Rows */
+.forum-row {
+  border-bottom: 1px solid var(--retro-border);
+  background-color: var(--retro-panel);
+  transition: background-color 0.1s ease;
+}
+.forum-row:nth-child(even) {
+  background-color: var(--retro-row-alt);
+}
+.forum-row:hover {
+  background-color: var(--retro-row-hover) !important;
+}
+
+/* Classic scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--retro-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #a1b7cd;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #105289;
+}
+
+/* Retro status badges */
+.retro-badge {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  display: inline-block;
+  text-transform: uppercase;
+}
+
+.badge-admin {
+  background: linear-gradient(to bottom, #d9534f 0%, #c9302c 100%);
+}
+.badge-mod {
+  background: linear-gradient(to bottom, #f0ad4e 0%, #ec971f 100%);
+}
+.badge-member {
+  background: linear-gradient(to bottom, #5bc0de 0%, #31b0d5 100%);
+}
+.badge-online {
+  background: linear-gradient(to bottom, #5cb85c 0%, #449d44 100%);
+  font-size: 8px;
+}
+.badge-offline {
+  background: linear-gradient(to bottom, #777777 0%, #5e5e5e 100%);
+  font-size: 8px;
+}
+
+/* Nested Comments indents lines */
+.comment-indent-line {
+  position: relative;
+}
+.comment-indent-line::before {
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--retro-border);
+  opacity: 0.6;
+}
+
+/* CSS glows and blinkers */
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #5cb85c;
+  display: inline-block;
+  box-shadow: 0 0 5px #5cb85c;
+}
+
+.offline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #999999;
+  display: inline-block;
+}
+
+.retro-avatar {
+  border: 1px solid var(--retro-border);
+  padding: 2px;
+  background-color: #ffffff;
+  border-radius: 3px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+.dark .retro-avatar {
+  background-color: #1b2631;
+}
+
+/* phpBB BBCode style blocks */
+.retro-quote {
+  background-color: var(--retro-row-alt);
+  border-left: 3px solid #105289;
+  padding: 8px 12px;
+  font-style: italic;
+  font-size: 12px;
+  margin: 8px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ===== Avatar Upload Component ===== */
+
+.avatar-upload-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.avatar-upload-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 4px;
+}
+
+.avatar-upload-wrapper:hover .avatar-upload-overlay {
+  opacity: 1;
+}
+
+/* Modal backdrop */
+.avatar-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: avatarFadeIn 0.15s ease;
+}
+
+/* Modal container */
+.avatar-modal {
+  width: 90%;
+  max-width: 420px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--retro-border);
+  animation: avatarSlideUp 0.2s ease;
+}
+
+/* Crop preview container */
+.avatar-crop-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  background: var(--retro-row-alt);
+  border: 1px dashed var(--retro-border);
+  border-radius: 4px;
+  padding: 12px;
+}
+
+@keyframes avatarFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes avatarSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
