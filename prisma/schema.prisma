@@ -1,93 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id              String           @id @default(uuid())
-  username        String           @unique
-  email           String           @unique
-  passwordHash    String
-  avatarUrl       String?          @db.VarChar(500)
-  bio             String?          @db.VarChar(500)
-  reputation      Int              @default(10) // Karma score
-  joinedAt        DateTime         @default(now())
-  
-  // Relations
-  forumsCreated   Forum[]          @relation("ForumOwner")
-  memberships     ForumMember[]
-  posts           Post[]
-  comments        Comment[]
-  postLikes       PostLike[]
-  commentLikes    CommentLike[]
-  bookmarks       PostBookmark[]
-  
-  // Follows
-  followers       Follow[]         @relation("Following")
-  following       Follow[]         @relation("Follower")
-  
-  // Messages
-  sentMessages     PrivateMessage[] @relation("SentMessages")
-  receivedMessages PrivateMessage[] @relation("ReceivedMessages")
-  
-  // Notifications
-  notificationsReceived Notification[] @relation("NotificationRecipient")
-  notificationsSent     Notification[] @relation("NotificationSender")
-  
-  // Online Status (Simulated)
-  lastActive      DateTime         @default(now())
+  id                    String           @id @default(uuid())
+  username              String           @unique
+  email                 String           @unique
+  passwordHash          String
+  avatarUrl             String?          @db.VarChar(500)
+  bio                   String?          @db.VarChar(500)
+  reputation            Int              @default(10)
+  joinedAt              DateTime         @default(now())
+  lastActive            DateTime         @default(now())
+  comments              Comment[]
+  commentLikes          CommentLike[]
+  following             Follow[]         @relation("Follower")
+  followers             Follow[]         @relation("Following")
+  forumsCreated         Forum[]          @relation("ForumOwner")
+  memberships           ForumMember[]
+  notificationsSent     Notification[]   @relation("NotificationSender")
+  notificationsReceived Notification[]   @relation("NotificationRecipient")
+  posts                 Post[]
+  bookmarks             PostBookmark[]
+  postLikes             PostLike[]
+  receivedMessages      PrivateMessage[] @relation("ReceivedMessages")
+  sentMessages          PrivateMessage[] @relation("SentMessages")
 }
 
 model Follow {
   followerId  String
   followingId String
   createdAt   DateTime @default(now())
-
-  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
 }
 
 model Forum {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique // URL identifier, e.g., "retro-computing"
-  description String   @db.VarChar(255)
-  rules       String?  @db.VarChar(1000)
-  logoUrl     String?  @db.VarChar(500)
-  createdAt   DateTime @default(now())
+  id          String        @id @default(uuid())
+  name        String        @unique
+  slug        String        @unique
+  description String        @db.VarChar(255)
+  rules       String?       @db.VarChar(1000)
+  logoUrl     String?       @db.VarChar(500)
+  createdAt   DateTime      @default(now())
   ownerId     String
-
-  owner       User     @relation("ForumOwner", fields: [ownerId], references: [id])
+  postCount   Int           @default(0)
+  memberCount Int           @default(0)
+  owner       User          @relation("ForumOwner", fields: [ownerId], references: [id])
   members     ForumMember[]
   posts       Post[]
-  
-  // Statistics
-  postCount   Int      @default(0)
-  memberCount Int      @default(0)
+}
+
+model ForumMember {
+  userId   String
+  forumId  String
+  role     ForumRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+  forum    Forum     @relation(fields: [forumId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, forumId])
+}
+
+model Post {
+  id           String         @id @default(uuid())
+  title        String
+  content      String
+  type         PostType       @default(TEXT)
+  mediaUrl     String?        @db.VarChar(500)
+  linkUrl      String?        @db.VarChar(500)
+  viewCount    Int            @default(0)
+  likeCount    Int            @default(0)
+  commentCount Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  userId       String
+  forumId      String
+  comments     Comment[]
+  forum        Forum          @relation(fields: [forumId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmarks    PostBookmark[]
+  likes        PostLike[]
+}
+
+model PostLike {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model PostBookmark {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model Comment {
+  id        String        @id @default(uuid())
+  content   String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  likeCount Int           @default(0)
+  userId    String
+  postId    String
+  parentId  String?
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentReplies")
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommentLike[]
+}
+
+model CommentLike {
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  senderId  String?
+  type      NotificationType
+  entityId  String?
+  content   String           @db.VarChar(255)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  sender    User?            @relation("NotificationSender", fields: [senderId], references: [id])
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PrivateMessage {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 enum ForumRole {
   OWNER
   MODERATOR
   MEMBER
-}
-
-model ForumMember {
-  userId    String
-  forumId   String
-  role      ForumRole @default(MEMBER)
-  joinedAt  DateTime  @default(now())
-
-  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  forum     Forum @relation(fields: [forumId], references: [id], onDelete: Cascade)
-
-  @@id([userId, forumId])
 }
 
 enum PostType {
@@ -97,83 +173,6 @@ enum PostType {
   DISCUSSION
 }
 
-model Post {
-  id           String       @id @default(uuid())
-  title        String
-  content      String       @db.Text
-  type         PostType     @default(TEXT)
-  mediaUrl     String?      @db.VarChar(500) // Image URL
-  linkUrl      String?      @db.VarChar(500) // For link posts
-  viewCount    Int          @default(0)
-  likeCount    Int          @default(0)
-  commentCount Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  
-  // Relations
-  userId       String
-  forumId      String
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  forum        Forum        @relation(fields: [forumId], references: [id], onDelete: Cascade)
-  
-  likes        PostLike[]
-  bookmarks    PostBookmark[]
-  comments     Comment[]
-}
-
-model PostLike {
-  userId    String
-  postId    String
-  createdAt DateTime @default(now())
-
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@id([userId, postId])
-}
-
-model PostBookmark {
-  userId    String
-  postId    String
-  createdAt DateTime @default(now())
-
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@id([userId, postId])
-}
-
-model Comment {
-  id        String   @id @default(uuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  likeCount Int      @default(0)
-  
-  // Relations
-  userId    String
-  postId    String
-  parentId  String?  // Self-relation for nested replies
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentReplies")
-  
-  likes     CommentLike[]
-}
-
-model CommentLike {
-  userId    String
-  commentId String
-  createdAt DateTime @default(now())
-
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-
-  @@id([userId, commentId])
-}
-
 enum NotificationType {
   LIKE
   COMMENT
@@ -181,30 +180,4 @@ enum NotificationType {
   FORUM_JOIN
   PRIVATE_MESSAGE
   SYSTEM
-}
-
-model Notification {
-  id         String           @id @default(uuid())
-  userId     String           // Recipient
-  senderId   String?          // Actor (who liked, followed, commented)
-  type       NotificationType
-  entityId   String?          // ID of post, comment, message, etc.
-  content    String           @db.VarChar(255)
-  isRead     Boolean          @default(false)
-  createdAt  DateTime         @default(now())
-
-  user       User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  sender     User?            @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
-}
-
-model PrivateMessage {
-  id         String   @id @default(uuid())
-  senderId   String
-  receiverId String
-  content    String   @db.Text
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
-
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 }
