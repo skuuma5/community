@@ -1,4 +1,5 @@
-import { AuthOptions, DefaultSession } from "next-auth";
+import type { AuthOptions, DefaultSession } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import db from "./db";
@@ -23,6 +24,39 @@ declare module "next-auth" {
   }
 }
 
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    username?: string;
+    reputation?: number;
+    avatarUrl?: string | null;
+  }
+}
+
+async function getTokenUserFields(userId: string): Promise<Partial<JWT>> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      username: true,
+      reputation: true,
+      avatarUrl: true,
+    },
+  });
+
+  if (!user) {
+    return {};
+  }
+
+  return {
+    id: user.id,
+    sub: user.id,
+    username: user.username,
+    reputation: user.reputation,
+    avatarUrl: user.avatarUrl,
+  };
+}
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
@@ -44,7 +78,6 @@ export const authOptions: AuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        // Find user by username or email
         const user = await db.user.findFirst({
           where: {
             OR: [
@@ -67,10 +100,9 @@ export const authOptions: AuthOptions = {
           throw new Error("Incorrect password");
         }
 
-        // Return user fields conforming to next-auth user
         return {
           id: user.id,
-          name: user.username, // using username as name
+          name: user.username,
           email: user.email,
           username: user.username,
           reputation: user.reputation,
@@ -80,28 +112,54 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
+        token.sub = user.id;
         token.id = user.id;
         token.username = user.username;
         token.reputation = user.reputation;
         token.avatarUrl = user.avatarUrl;
+        return token;
       }
-      
-      // Reactive reputation / avatar update if trigger occurs
-      if (trigger === "update" && session) {
-        return { ...token, ...session.user };
+
+      const userId =
+        typeof token.sub === "string"
+          ? token.sub
+          : typeof token.id === "string"
+            ? token.id
+            : undefined;
+
+      if (!userId) {
+        return token;
+      }
+
+      token.sub = userId;
+      token.id = userId;
+
+      if (trigger === "update") {
+        return { ...token, ...(await getTokenUserFields(userId)) };
       }
 
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string;
-        session.user.reputation = token.reputation as number;
-        session.user.avatarUrl = token.avatarUrl as string | null;
+      const userId =
+        typeof token.sub === "string"
+          ? token.sub
+          : typeof token.id === "string"
+            ? token.id
+            : undefined;
+
+      if (session.user && userId) {
+        session.user.id = userId;
+        session.user.username =
+          typeof token.username === "string" ? token.username : "";
+        session.user.reputation =
+          typeof token.reputation === "number" ? token.reputation : 0;
+        session.user.avatarUrl =
+          typeof token.avatarUrl === "string" ? token.avatarUrl : null;
       }
+
       return session;
     },
   },

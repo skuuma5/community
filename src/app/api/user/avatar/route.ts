@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import { storage } from "@/lib/storage";
+import { getCurrentUserId } from "@/lib/session";
 
 /** Allowed MIME types for avatar uploads */
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -13,8 +12,8 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 export async function POST(req: NextRequest) {
   try {
     // 1. Auth check
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       return NextResponse.json(
         { error: "You must be logged in to upload an avatar." },
         { status: 401 }
@@ -56,11 +55,11 @@ export async function POST(req: NextRequest) {
     const ext = file.type === "image/jpeg" ? "jpg" 
               : file.type === "image/png" ? "png" 
               : "webp";
-    const sanitizedFilename = `${session.user.id}_${Date.now()}.${ext}`;
+    const sanitizedFilename = `${userId}_${Date.now()}.${ext}`;
 
     // 7. Delete previous avatar via storage adapter (no-op for external URLs)
     const currentUser = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { avatarUrl: true },
     });
 
@@ -73,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     // 9. Update database
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { avatarUrl },
     });
 
