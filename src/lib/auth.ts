@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import db from "./db";
 import bcrypt from "bcryptjs";
+import { logServerError } from "@/lib/errors";
 
 // Extend session type to include custom fields
 declare module "next-auth" {
@@ -34,27 +35,32 @@ declare module "next-auth/jwt" {
 }
 
 async function getTokenUserFields(userId: string): Promise<Partial<JWT>> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      username: true,
-      reputation: true,
-      avatarUrl: true,
-    },
-  });
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        reputation: true,
+        avatarUrl: true,
+      },
+    });
 
-  if (!user) {
+    if (!user) {
+      return {};
+    }
+
+    return {
+      id: user.id,
+      sub: user.id,
+      username: user.username,
+      reputation: user.reputation,
+      avatarUrl: user.avatarUrl,
+    };
+  } catch (error) {
+    logServerError("getTokenUserFields", error);
     return {};
   }
-
-  return {
-    id: user.id,
-    sub: user.id,
-    username: user.username,
-    reputation: user.reputation,
-    avatarUrl: user.avatarUrl,
-  };
 }
 
 export const authOptions: AuthOptions = {

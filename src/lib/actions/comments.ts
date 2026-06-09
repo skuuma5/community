@@ -1,14 +1,14 @@
 "use server";
 
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/session";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function createComment(formData: FormData) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to comment." };
     }
 
@@ -28,7 +28,7 @@ export async function createComment(formData: FormData) {
       return { error: "Post thread not found." };
     }
 
-    const commenter = session.user.username;
+    const commenter = user.username;
 
     // Create comment, increment post commentCount, and award commenter +2 reputation
     const comment = await db.$transaction(async (tx) => {
@@ -37,7 +37,7 @@ export async function createComment(formData: FormData) {
           content,
           postId,
           parentId,
-          userId: session.user.id,
+          userId: user.id,
         },
       });
 
@@ -50,18 +50,18 @@ export async function createComment(formData: FormData) {
 
       // Award +2 rep for contributing to the discussion
       await tx.user.update({
-        where: { id: session.user.id },
+        where: { id: user.id },
         data: {
           reputation: { increment: 2 },
         },
       });
 
       // Notify post owner
-      if (post.userId !== session.user.id && !parentId) {
+      if (post.userId !== user.id && !parentId) {
         await tx.notification.create({
           data: {
             userId: post.userId,
-            senderId: session.user.id,
+            senderId: user.id,
             type: "COMMENT",
             entityId: postId,
             content: `${commenter} replied to your thread "${post.title.substring(0, 30)}..."`,
@@ -75,11 +75,11 @@ export async function createComment(formData: FormData) {
           where: { id: parentId },
         });
 
-        if (parentComment && parentComment.userId !== session.user.id) {
+        if (parentComment && parentComment.userId !== user.id) {
           await tx.notification.create({
             data: {
               userId: parentComment.userId,
-              senderId: session.user.id,
+              senderId: user.id,
               type: "COMMENT",
               entityId: postId,
               content: `${commenter} replied to your reply in "${post.title.substring(0, 30)}..."`,
@@ -93,20 +93,20 @@ export async function createComment(formData: FormData) {
 
     revalidatePath(`/forums/${post.forum.slug}/posts/${postId}`);
     return { success: true, commentId: comment.id };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Create comment error:", error);
-    return { error: "Failed to post comment." };
+    return { error: getErrorMessage(error, "Failed to post comment.") };
   }
 }
 
 export async function toggleLikeComment(commentId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to like comments." };
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Check if like exists
     const existingLike = await db.commentLike.findUnique({
@@ -170,7 +170,7 @@ export async function toggleLikeComment(commentId: string) {
           });
 
           // Create notification
-          const liker = session.user.username;
+          const liker = user.username;
           await tx.notification.create({
             data: {
               userId: comment.userId,
@@ -185,8 +185,8 @@ export async function toggleLikeComment(commentId: string) {
 
       return { success: true, liked: true };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Toggle comment like error:", error);
-    return { error: "Failed to process comment like." };
+    return { error: getErrorMessage(error, "Failed to process comment like.") };
   }
 }

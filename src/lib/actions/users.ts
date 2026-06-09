@@ -1,19 +1,19 @@
 "use server";
 
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { storage } from "@/lib/storage";
+import { getCurrentUser } from "@/lib/session";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function toggleFollowUser(targetUserId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to follow users." };
     }
 
-    const followerId = session.user.id;
+    const followerId = user.id;
 
     if (followerId === targetUserId) {
       return { error: "You cannot follow yourself." };
@@ -33,7 +33,7 @@ export async function toggleFollowUser(targetUserId: string) {
       },
     });
 
-    const followerUsername = session.user.username;
+    const followerUsername = user.username;
 
     if (existingFollow) {
       // Unfollow
@@ -84,9 +84,9 @@ export async function toggleFollowUser(targetUserId: string) {
       revalidatePath(`/profile/${targetUser.username}`);
       return { success: true, followed: true };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Toggle follow error:", error);
-    return { error: "Failed to process follow." };
+    return { error: getErrorMessage(error, "Failed to process follow.") };
   }
 }
 
@@ -96,14 +96,14 @@ export async function toggleFollowUser(targetUserId: string) {
  */
 export async function resetAvatar() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
       return { error: "You must be logged in." };
     }
 
     // Fetch current avatar URL
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: currentUser.id },
       select: { avatarUrl: true, username: true },
     });
 
@@ -120,7 +120,7 @@ export async function resetAvatar() {
     const defaultAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.username}`;
 
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: currentUser.id },
       data: { avatarUrl: defaultAvatar },
     });
 
@@ -128,6 +128,6 @@ export async function resetAvatar() {
     return { success: true, avatarUrl: defaultAvatar };
   } catch (error) {
     console.error("Reset avatar error:", error);
-    return { error: "Failed to reset avatar." };
+    return { error: getErrorMessage(error, "Failed to reset avatar.") };
   }
 }

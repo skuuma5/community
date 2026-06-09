@@ -7,8 +7,8 @@ import CreatePostBox from "@/components/CreatePostBox";
 import { Folder, Users, MessageSquare, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import JoinForumButton from "./JoinForumButton";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUserId } from "@/lib/session";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -18,24 +18,31 @@ interface ForumPageProps {
 
 export default async function ForumPage({ params }: ForumPageProps) {
   const { slug } = await params;
-  const session = await getServerSession(authOptions);
+  const userId = await getCurrentUserId();
+  let posts: any[] = [];
+  let postsLoadError = false;
 
   // Fetch Forum with memberships
-  const forum = await db.forum.findUnique({
-    where: { slug },
-    include: {
-      owner: {
-        select: {
-          username: true,
+  let forum = null;
+  try {
+    forum = await db.forum.findUnique({
+      where: { slug },
+      include: {
+        owner: {
+          select: {
+            username: true,
+          },
+        },
+        members: {
+          select: {
+            userId: true,
+          },
         },
       },
-      members: {
-        select: {
-          userId: true,
-        },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    logServerError("ForumPage.forum", error);
+  }
 
   if (!forum) {
     return (
@@ -48,38 +55,41 @@ export default async function ForumPage({ params }: ForumPageProps) {
   }
 
   // Fetch posts under this forum
-  const posts = await db.post.findMany({
-    where: { forumId: forum.id },
-    orderBy: { createdAt: "desc" },
-    include: {
-      forum: {
-        select: {
-          name: true,
-          slug: true,
+  try {
+    posts = await db.post.findMany({
+      where: { forumId: forum.id },
+      orderBy: { createdAt: "desc" },
+      include: {
+        forum: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+        user: {
+          select: {
+            username: true,
+            avatarUrl: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        bookmarks: {
+          select: {
+            userId: true,
+          },
         },
       },
-      user: {
-        select: {
-          username: true,
-          avatarUrl: true,
-        },
-      },
-      likes: {
-        select: {
-          userId: true,
-        },
-      },
-      bookmarks: {
-        select: {
-          userId: true,
-        },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    postsLoadError = true;
+    logServerError("ForumPage.posts", error);
+  }
 
-  const isJoined = session
-    ? forum.members.some((m) => m.userId === session.user.id)
-    : false;
+  const isJoined = userId ? forum.members.some((m) => m.userId === userId) : false;
 
   return (
     <div className="flex flex-col space-y-4">
@@ -169,7 +179,9 @@ export default async function ForumPage({ params }: ForumPageProps) {
                 ))
               ) : (
                 <div className="p-12 text-center text-xs text-slate-500">
-                  There are no discussion threads in this sub-forum board yet. Click here or expand the composer box to start a new discussion!
+                  {postsLoadError
+                    ? "Threads could not be loaded right now. Please refresh in a moment."
+                    : "There are no discussion threads in this sub-forum board yet. Click here or expand the composer box to start a new discussion!"}
                 </div>
               )}
             </div>

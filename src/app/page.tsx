@@ -6,39 +6,48 @@ import PostCard from "@/components/PostCard";
 import CreatePostBox from "@/components/CreatePostBox";
 import { MessageSquare, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { logServerError } from "@/lib/errors";
 
 // Force dynamic rendering to always query latest database updates
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Query all posts ordered chronologically
-  const posts = await db.post.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      forum: {
-        select: {
-          name: true,
-          slug: true,
+  let posts: any[] = [];
+  let loadError = false;
+
+  try {
+    // Query all posts ordered chronologically
+    posts = await db.post.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        forum: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+        user: {
+          select: {
+            username: true,
+            avatarUrl: true,
+          },
+        },
+        likes: {
+          select: {
+            userId: true,
+          },
+        },
+        bookmarks: {
+          select: {
+            userId: true,
+          },
         },
       },
-      user: {
-        select: {
-          username: true,
-          avatarUrl: true,
-        },
-      },
-      likes: {
-        select: {
-          userId: true,
-        },
-      },
-      bookmarks: {
-        select: {
-          userId: true,
-        },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    loadError = true;
+    logServerError("Home.posts", error);
+  }
 
   return (
     <div className="flex flex-col space-y-4">
@@ -87,7 +96,9 @@ export default async function Home() {
                 ))
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                  There are no topics in this board yet. Click &quot;Start Community&quot; or expand the composer to publish your first thread!
+                  {loadError
+                    ? "Topics could not be loaded right now. Please refresh in a moment."
+                    : "There are no topics in this board yet. Click \"Start Community\" or expand the composer to publish your first thread!"}
                 </div>
               )}
             </div>

@@ -5,11 +5,11 @@ import Footer from "@/components/Footer";
 import PostCard from "@/components/PostCard";
 import { User, Award, Calendar, Users, FileText, Bookmark, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import FollowUserButton from "./FollowUserButton";
 import ProfileTabs from "./ProfileTabs";
 import AvatarUpload from "./AvatarUpload";
+import { getCurrentUserId } from "@/lib/session";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -19,61 +19,66 @@ interface ProfilePageProps {
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { username } = await params;
-  const session = await getServerSession(authOptions);
+  const userId = await getCurrentUserId();
 
   // Fetch target user profile details
-  const profileUser = await db.user.findUnique({
-    where: { username },
-    include: {
-      posts: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          forum: {
-            select: {
-              name: true,
-              slug: true,
-            },
-          },
-          user: {
-            select: {
-              username: true,
-              avatarUrl: true,
-            },
-          },
-          likes: { select: { userId: true } },
-          bookmarks: { select: { userId: true } },
-        },
-      },
-      bookmarks: {
-        include: {
-          post: {
-            include: {
-              forum: {
-                select: {
-                  name: true,
-                  slug: true,
-                },
+  let profileUser = null;
+  try {
+    profileUser = await db.user.findUnique({
+      where: { username },
+      include: {
+        posts: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            forum: {
+              select: {
+                name: true,
+                slug: true,
               },
-              user: {
-                select: {
-                  username: true,
-                  avatarUrl: true,
-                },
+            },
+            user: {
+              select: {
+                username: true,
+                avatarUrl: true,
               },
-              likes: { select: { userId: true } },
-              bookmarks: { select: { userId: true } },
+            },
+            likes: { select: { userId: true } },
+            bookmarks: { select: { userId: true } },
+          },
+        },
+        bookmarks: {
+          include: {
+            post: {
+              include: {
+                forum: {
+                  select: {
+                    name: true,
+                    slug: true,
+                  },
+                },
+                user: {
+                  select: {
+                    username: true,
+                    avatarUrl: true,
+                  },
+                },
+                likes: { select: { userId: true } },
+                bookmarks: { select: { userId: true } },
+              },
             },
           },
         },
-      },
-      followers: {
-        select: {
-          followerId: true,
+        followers: {
+          select: {
+            followerId: true,
+          },
         },
+        following: true,
       },
-      following: true,
-    },
-  });
+    });
+  } catch (error) {
+    logServerError("ProfilePage.profileUser", error);
+  }
 
   if (!profileUser) {
     return (
@@ -85,9 +90,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     );
   }
 
-  const isSelf = session ? session.user.id === profileUser.id : false;
-  const isFollowing = session
-    ? profileUser.followers.some((f) => f.followerId === session.user.id)
+  const isSelf = userId ? userId === profileUser.id : false;
+  const isFollowing = userId
+    ? profileUser.followers.some((f) => f.followerId === userId)
     : false;
 
   const joinedDate = new Date(profileUser.joinedAt).toLocaleDateString("en-US", {

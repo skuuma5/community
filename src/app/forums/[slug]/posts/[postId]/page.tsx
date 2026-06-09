@@ -7,9 +7,9 @@ import { incrementPostViews } from "@/lib/actions/posts";
 import { createComment } from "@/lib/actions/comments";
 import { MessageSquare, Flame, ImageIcon, ExternalLink, ShieldAlert, Reply, AlertCircle, Eye, ThumbsUp } from "lucide-react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import PostActionsPanel from "./PostActionsPanel";
+import { getCurrentUserId } from "@/lib/session";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -42,28 +42,27 @@ function buildCommentTree(comments: any[]) {
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug, postId } = await params;
-  const session = await getServerSession(authOptions);
-
-  // Increment view counts on load
-  await db.post.update({
-    where: { id: postId },
-    data: { viewCount: { increment: 1 } },
-  });
+  const userId = await getCurrentUserId();
 
   // Query detailed post
-  const post = await db.post.findUnique({
-    where: { id: postId },
-    include: {
-      forum: true,
-      user: true,
-      likes: {
-        select: { userId: true },
+  let post = null;
+  try {
+    post = await db.post.findUnique({
+      where: { id: postId },
+      include: {
+        forum: true,
+        user: true,
+        likes: {
+          select: { userId: true },
+        },
+        bookmarks: {
+          select: { userId: true },
+        },
       },
-      bookmarks: {
-        select: { userId: true },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    logServerError("PostPage.post", error);
+  }
 
   if (!post || post.forum.slug !== slug) {
     return (
@@ -75,24 +74,43 @@ export default async function PostPage({ params }: PostPageProps) {
     );
   }
 
+  // Increment view counts after confirming the thread exists. A failed view
+  // update should never prevent reading the thread.
+  try {
+    await db.post.update({
+      where: { id: postId },
+      data: { viewCount: { increment: 1 } },
+    });
+    post.viewCount += 1;
+  } catch (error) {
+    logServerError("PostPage.incrementView", error);
+  }
+
   // Query all comments for the post
-  const rawComments = await db.comment.findMany({
-    where: { postId },
-    include: {
-      user: {
-        select: {
-          username: true,
-          avatarUrl: true,
-          reputation: true,
-          joinedAt: true,
+  let rawComments: any[] = [];
+  let commentsLoadError = false;
+  try {
+    rawComments = await db.comment.findMany({
+      where: { postId },
+      include: {
+        user: {
+          select: {
+            username: true,
+            avatarUrl: true,
+            reputation: true,
+            joinedAt: true,
+          },
+        },
+        likes: {
+          select: { userId: true },
         },
       },
-      likes: {
-        select: { userId: true },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+      orderBy: { createdAt: "asc" },
+    });
+  } catch (error) {
+    commentsLoadError = true;
+    logServerError("PostPage.comments", error);
+  }
 
   const commentTree = buildCommentTree(rawComments);
 
@@ -229,8 +247,8 @@ export default async function PostPage({ params }: PostPageProps) {
                 <PostActionsPanel
                   postId={post.id}
                   initialLikes={post.likeCount}
-                  initialLiked={session ? post.likes.some((l) => l.userId === session.user.id) : false}
-                  initialBookmarked={session ? post.bookmarks.some((b) => b.userId === session.user.id) : false}
+                  initialLiked={userId ? post.likes.some((l) => l.userId === userId) : false}
+                  initialBookmarked={userId ? post.bookmarks.some((b) => b.userId === userId) : false}
                 />
               </div>
             </div>
@@ -250,13 +268,15 @@ export default async function PostPage({ params }: PostPageProps) {
               </div>
             ) : (
               <div className="board-container rounded p-6 bg-white dark:bg-[#1b2631] text-center text-xs text-slate-500">
-                No replies have been posted to this thread yet. Be the first to express your thoughts below!
+                {commentsLoadError
+                  ? "Replies could not be loaded right now. Please refresh in a moment."
+                  : "No replies have been posted to this thread yet. Be the first to express your thoughts below!"}
               </div>
             )}
           </div>
 
           {/* Add Reply Composer (Bottom page) */}
-          {session ? (
+          {userId ? (
             <div className="board-container rounded overflow-hidden">
               <div className="glossy-header text-xs py-1.5 flex items-center">
                 <Reply className="w-3.5 h-3.5 mr-1" /> Post a Reply to this Thread

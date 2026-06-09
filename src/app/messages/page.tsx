@@ -2,11 +2,11 @@ import db from "@/lib/db";
 import LeftSidebar from "@/components/LeftSidebar";
 import RightSidebar from "@/components/RightSidebar";
 import Footer from "@/components/Footer";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { MessageSquare, ArrowLeft } from "lucide-react";
 import DirectMessages from "./DirectMessages";
+import { getCurrentUserId } from "@/lib/session";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +15,11 @@ interface MessagesPageProps {
 }
 
 export default async function MessagesPage({ searchParams }: MessagesPageProps) {
-  const session = await getServerSession(authOptions);
+  const userId = await getCurrentUserId();
   const params = await searchParams;
   const initialUser = params.user || "";
 
-  if (!session || !session.user) {
+  if (!userId) {
     return (
       <div className="p-8 text-center bg-white dark:bg-[#1b2631] rounded board-container max-w-lg mx-auto my-12 text-xs">
         <h3 className="font-bold text-red-600 text-sm mb-2">Authentication Required</h3>
@@ -30,33 +30,38 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
   }
 
   // Fetch all DMs involving the current user
-  const messages = await db.privateMessage.findMany({
-    where: {
-      OR: [
-        { senderId: session.user.id },
-        { receiverId: session.user.id },
-      ],
-    },
-    include: {
-      sender: {
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
+  let messages: any[] = [];
+  try {
+    messages = await db.privateMessage.findMany({
+      where: {
+        OR: [
+          { senderId: userId },
+          { receiverId: userId },
+        ],
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
         },
       },
-      receiver: {
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
-        },
+      orderBy: {
+        createdAt: "asc",
       },
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
-  });
+    });
+  } catch (error) {
+    logServerError("MessagesPage.messages", error);
+  }
 
   // Group messages by the opposite participant
   const threadsMap: Record<string, {
@@ -66,7 +71,7 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
   }> = {};
 
   messages.forEach((m) => {
-    const isSender = m.senderId === session.user.id;
+    const isSender = m.senderId === userId;
     const otherUser = isSender ? m.receiver : m.sender;
 
     if (!threadsMap[otherUser.username]) {
@@ -114,7 +119,7 @@ export default async function MessagesPage({ searchParams }: MessagesPageProps) 
             
             <DirectMessages
               threads={threads as any}
-              currentUserId={session.user.id}
+              currentUserId={userId}
               initialUser={initialUser}
             />
           </div>

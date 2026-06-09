@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { getCurrentUserId } from "@/lib/session";
+import { getErrorMessage, logServerError } from "@/lib/errors";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /** Allowed MIME types for avatar uploads */
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -20,8 +24,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (contentLength > MAX_FILE_SIZE + 1024 * 256) {
+      return NextResponse.json(
+        { error: "Upload is too large. Please choose an image under 2 MB." },
+        { status: 413 }
+      );
+    }
+
     // 2. Parse multipart form data
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      logServerError("avatar.formData", error);
+      return NextResponse.json(
+        {
+          error:
+            "The upload could not be read. Please retry from a stable connection.",
+        },
+        { status: 400 }
+      );
+    }
+
     const file = formData.get("avatar");
 
     if (!file || !(file instanceof File)) {
@@ -32,7 +57,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Validate file type
-    if (!ALLOWED_TYPES.has(file.type)) {
+    const contentType = file.type || "application/octet-stream";
+    if (!ALLOWED_TYPES.has(contentType)) {
       return NextResponse.json(
         { error: "Invalid file type. Only JPG, PNG, and WebP are allowed." },
         { status: 400 }
@@ -40,6 +66,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Validate file size
+    if (file.size === 0) {
+      return NextResponse.json(
+        { error: "The selected image appears to be empty. Please choose another file." },
+        { status: 400 }
+      );
+    }
+
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: "File too large. Maximum size is 2 MB." },
@@ -52,8 +85,8 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // 6. Generate sanitized filename: {userId}_{timestamp}.{ext}
-    const ext = file.type === "image/jpeg" ? "jpg" 
-              : file.type === "image/png" ? "png" 
+    const ext = contentType === "image/jpeg" ? "jpg" 
+              : contentType === "image/png" ? "png" 
               : "webp";
     const sanitizedFilename = `${userId}_${Date.now()}.${ext}`;
 
@@ -68,7 +101,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 8. Upload new avatar via storage adapter
-    const avatarUrl = await storage.upload(buffer, sanitizedFilename, file.type);
+    const avatarUrl = await storage.upload(buffer, sanitizedFilename, contentType);
 
     // 9. Update database
     await db.user.update({
@@ -78,9 +111,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, avatarUrl });
   } catch (error) {
-    console.error("Avatar upload error:", error);
+    logServerError("avatar.upload", error);
     return NextResponse.json(
-      { error: "An unexpected error occurred during upload." },
+      { error: getErrorMessage(error, "An unexpected error occurred during upload.") },
       { status: 500 }
     );
   }

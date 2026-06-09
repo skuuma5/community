@@ -1,19 +1,49 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
+import { logServerError } from "@/lib/errors";
 
 export async function getCurrentUserId() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
-  if (!userId) {
+    if (!userId) {
+      return null;
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    return user?.id ?? null;
+  } catch (error) {
+    logServerError("getCurrentUserId", error);
     return null;
   }
+}
 
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true },
-  });
+export async function getCurrentUser() {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
 
-  return user?.id ?? null;
+    if (!userId) {
+      return null;
+    }
+
+    return await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        reputation: true,
+        avatarUrl: true,
+      },
+    });
+  } catch (error) {
+    logServerError("getCurrentUser", error);
+    return null;
+  }
 }

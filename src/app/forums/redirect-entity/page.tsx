@@ -1,5 +1,6 @@
 import db from "@/lib/db";
 import { redirect } from "next/navigation";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -15,19 +16,29 @@ export default async function RedirectEntityPage({ searchParams }: RedirectPageP
     redirect("/");
   }
 
-  const post = await db.post.findUnique({
-    where: { id },
-    include: {
-      forum: {
-        select: {
-          slug: true,
+  let targetPath: string | null = null;
+
+  try {
+    const post = await db.post.findUnique({
+      where: { id },
+      include: {
+        forum: {
+          select: {
+            slug: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (post) {
-    redirect(`/forums/${post.forum.slug}/posts/${post.id}`);
+    if (post) {
+      targetPath = `/forums/${post.forum.slug}/posts/${post.id}`;
+    }
+  } catch (error) {
+    logServerError("RedirectEntityPage.post", error);
+  }
+
+  if (targetPath) {
+    redirect(targetPath);
   }
 
   redirect("/");

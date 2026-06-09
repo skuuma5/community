@@ -15,11 +15,13 @@
  */
 
 import { LocalStorageAdapter } from "./local";
-// import { SupabaseStorageAdapter } from "./supabase";
+import { SupabaseStorageAdapter } from "./supabase";
 // import { S3StorageAdapter } from "./s3";
 
 export type { StorageAdapter } from "./storage";
 
-export const storage = new LocalStorageAdapter();
-// export const storage = new SupabaseStorageAdapter();
+export const storage =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new SupabaseStorageAdapter()
+    : new LocalStorageAdapter();
 // export const storage = new S3StorageAdapter();

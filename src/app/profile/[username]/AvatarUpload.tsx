@@ -120,18 +120,23 @@ export default function AvatarUpload({ currentAvatarUrl, username }: AvatarUploa
     setError(null);
 
     try {
-      // Crop and compress to 400×400 WebP
+      // Crop and compress to 400x400. Some mobile browsers may fall back
+      // from WebP to PNG, so use the actual Blob MIME type when uploading.
       const blob = await cropAndResize(originalImg, cropOffset.x, cropOffset.y, cropSize, 400);
+      const uploadType = ACCEPTED_TYPES.includes(blob.type) ? blob.type : "image/webp";
+      const extension = uploadType === "image/png" ? "png" : uploadType === "image/jpeg" ? "jpg" : "webp";
 
       const formData = new FormData();
-      formData.append("avatar", blob, "avatar.webp");
+      formData.append("avatar", blob, `avatar.${extension}`);
 
       const res = await fetch("/api/user/avatar", {
         method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({
+        error: "The server returned an unreadable upload response.",
+      }));
 
       if (!res.ok) {
         setError(data.error || "Upload failed.");
@@ -147,8 +152,12 @@ export default function AvatarUpload({ currentAvatarUrl, username }: AvatarUploa
       setPreviewSrc(null);
       setOriginalImg(null);
       router.refresh();
-    } catch {
-      setError("An unexpected error occurred.");
+    } catch (error) {
+      setError(
+        error instanceof TypeError
+          ? "Network error while uploading. Please check your connection and try again."
+          : "An unexpected upload error occurred."
+      );
     } finally {
       setUploading(false);
     }

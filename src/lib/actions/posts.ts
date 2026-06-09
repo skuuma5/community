@@ -1,15 +1,15 @@
 "use server";
 
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { PostType } from "@prisma/client";
+import { getCurrentUser } from "@/lib/session";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function createPost(formData: FormData) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to post." };
     }
 
@@ -45,7 +45,7 @@ export async function createPost(formData: FormData) {
           type,
           mediaUrl: type === "IMAGE" ? mediaUrl : null,
           linkUrl: type === "LINK" ? linkUrl : null,
-          userId: session.user.id,
+          userId: user.id,
           forumId,
         },
       });
@@ -59,7 +59,7 @@ export async function createPost(formData: FormData) {
 
       // Award 5 reputation to author for publishing a discussion thread
       await tx.user.update({
-        where: { id: session.user.id },
+        where: { id: user.id },
         data: {
           reputation: { increment: 5 },
         },
@@ -71,20 +71,20 @@ export async function createPost(formData: FormData) {
     revalidatePath("/");
     revalidatePath(`/forums/${forum.slug}`);
     return { success: true, postId: post.id };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Create post error:", error);
-    return { error: "Failed to create post thread." };
+    return { error: getErrorMessage(error, "Failed to create post thread.") };
   }
 }
 
 export async function toggleLikePost(postId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to like posts." };
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Check if like exists
     const existingLike = await db.postLike.findUnique({
@@ -148,7 +148,7 @@ export async function toggleLikePost(postId: string) {
           });
 
           // Create notification for post owner
-          const liker = session.user.username;
+          const liker = user.username;
           await tx.notification.create({
             data: {
               userId: post.userId,
@@ -163,20 +163,20 @@ export async function toggleLikePost(postId: string) {
 
       return { success: true, liked: true };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Toggle like error:", error);
-    return { error: "Failed to process like." };
+    return { error: getErrorMessage(error, "Failed to process like.") };
   }
 }
 
 export async function toggleBookmarkPost(postId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to bookmark." };
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     const existingBookmark = await db.postBookmark.findUnique({
       where: {
@@ -195,9 +195,9 @@ export async function toggleBookmarkPost(postId: string) {
       });
       return { success: true, bookmarked: true };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Toggle bookmark error:", error);
-    return { error: "Failed to bookmark." };
+    return { error: getErrorMessage(error, "Failed to bookmark.") };
   }
 }
 
@@ -212,6 +212,6 @@ export async function incrementPostViews(postId: string) {
     return { success: true };
   } catch (error) {
     console.error("Increment views error:", error);
-    return { error: "Failed to increment views." };
+    return { error: getErrorMessage(error, "Failed to increment views.") };
   }
 }

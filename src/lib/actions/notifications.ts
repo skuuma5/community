@@ -1,20 +1,20 @@
 "use server";
 
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { getCurrentUserId } from "@/lib/session";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function markNotificationsAsRead() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const userId = await getCurrentUserId();
+    if (!userId) {
       return { error: "You must be logged in." };
     }
 
     await db.notification.updateMany({
       where: {
-        userId: session.user.id,
+        userId,
         isRead: false,
       },
       data: {
@@ -26,18 +26,18 @@ export async function markNotificationsAsRead() {
     return { success: true };
   } catch (error) {
     console.error("Mark notifications read error:", error);
-    return { error: "Failed to mark notifications as read." };
+    return { error: getErrorMessage(error, "Failed to mark notifications as read.") };
   }
 }
 
 export async function getUnreadNotificationCount() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) return 0;
+    const userId = await getCurrentUserId();
+    if (!userId) return 0;
 
     return await db.notification.count({
       where: {
-        userId: session.user.id,
+        userId,
         isRead: false,
       },
     });

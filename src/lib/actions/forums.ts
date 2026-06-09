@@ -1,14 +1,14 @@
 "use server";
 
 import db from "@/lib/db";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/session";
+import { getErrorMessage } from "@/lib/errors";
 
 export async function createForum(formData: FormData) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to create a forum." };
     }
 
@@ -54,14 +54,14 @@ export async function createForum(formData: FormData) {
           description,
           rules,
           logoUrl,
-          ownerId: session.user.id,
+          ownerId: user.id,
           memberCount: 1,
         },
       });
 
       await tx.forumMember.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           forumId: forum.id,
           role: "OWNER",
         },
@@ -70,20 +70,20 @@ export async function createForum(formData: FormData) {
 
     revalidatePath("/forums");
     return { success: true, slug };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Create forum error:", error);
-    return { error: "Failed to create forum." };
+    return { error: getErrorMessage(error, "Failed to create forum.") };
   }
 }
 
 export async function toggleForumMembership(forumId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { error: "You must be logged in to join a community." };
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Check if membership exists
     const membership = await db.forumMember.findUnique({
@@ -140,9 +140,9 @@ export async function toggleForumMembership(forumId: string) {
       revalidatePath(`/forums/${forum.slug}`);
       return { success: true, joined: true };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Toggle membership error:", error);
-    return { error: "Failed to perform operation." };
+    return { error: getErrorMessage(error, "Failed to perform operation.") };
   }
 }
 

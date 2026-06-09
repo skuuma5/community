@@ -4,20 +4,29 @@ import RightSidebar from "@/components/RightSidebar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { Folder, ArrowRight, FolderPlus } from "lucide-react";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 export default async function ForumsPage() {
-  const forums = await db.forum.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      owner: {
-        select: {
-          username: true,
+  let forums: any[] = [];
+  let loadError = false;
+
+  try {
+    forums = await db.forum.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        owner: {
+          select: {
+            username: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    loadError = true;
+    logServerError("ForumsPage.forums", error);
+  }
 
   return (
     <div className="flex flex-col space-y-4">
@@ -115,7 +124,9 @@ export default async function ForumsPage() {
                 ))
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500">
-                  No community categories created yet.
+                  {loadError
+                    ? "Community categories could not be loaded right now. Please refresh in a moment."
+                    : "No community categories created yet."}
                 </div>
               )}
             </div>

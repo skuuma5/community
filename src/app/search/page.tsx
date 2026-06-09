@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import PostCard from "@/components/PostCard";
 import { Search, Folder, User, MessageSquare, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -19,63 +20,69 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let matchedPosts: any[] = [];
   let matchedForums: any[] = [];
   let matchedUsers: any[] = [];
+  let loadError = false;
 
   if (query.trim()) {
     const q = query.trim();
 
-    [matchedPosts, matchedForums, matchedUsers] = await Promise.all([
-      // 1. Search posts
-      db.post.findMany({
-        where: {
-          OR: [
-            { title: { contains: q } },
-            { content: { contains: q } },
-          ],
-        },
-        include: {
-          forum: {
-            select: {
-              name: true,
-              slug: true,
-            },
+    try {
+      [matchedPosts, matchedForums, matchedUsers] = await Promise.all([
+        // 1. Search posts
+        db.post.findMany({
+          where: {
+            OR: [
+              { title: { contains: q } },
+              { content: { contains: q } },
+            ],
           },
-          user: {
-            select: {
-              username: true,
-              avatarUrl: true,
+          include: {
+            forum: {
+              select: {
+                name: true,
+                slug: true,
+              },
             },
+            user: {
+              select: {
+                username: true,
+                avatarUrl: true,
+              },
+            },
+            likes: { select: { userId: true } },
+            bookmarks: { select: { userId: true } },
           },
-          likes: { select: { userId: true } },
-          bookmarks: { select: { userId: true } },
-        },
-        orderBy: { createdAt: "desc" },
-      }),
+          orderBy: { createdAt: "desc" },
+        }),
 
-      // 2. Search forums
-      db.forum.findMany({
-        where: {
-          OR: [
-            { name: { contains: q } },
-            { description: { contains: q } },
-          ],
-        },
-        take: 10,
-      }),
+        // 2. Search forums
+        db.forum.findMany({
+          where: {
+            OR: [
+              { name: { contains: q } },
+              { description: { contains: q } },
+            ],
+          },
+          take: 10,
+        }),
 
-      // 3. Search users
-      db.user.findMany({
-        where: {
-          username: { contains: q },
-        },
-        select: {
-          id: true,
-          username: true,
-          avatarUrl: true,
-          reputation: true,
-        },
-        take: 10,
-      }),
-    ]);
+        // 3. Search users
+        db.user.findMany({
+          where: {
+            username: { contains: q },
+          },
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            reputation: true,
+          },
+          take: 10,
+        }),
+      ]);
+    } catch (error) {
+      loadError = true;
+      logServerError("SearchPage.results", error);
+    }
   }
 
   return (
@@ -184,7 +191,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ))
               ) : (
                 <div className="p-8 text-center text-xs text-slate-500">
-                  No post threads matched your search query. Try another keyword.
+                  {loadError
+                    ? "Search results could not be loaded right now. Please refresh in a moment."
+                    : "No post threads matched your search query. Try another keyword."}
                 </div>
               )}
             </div>

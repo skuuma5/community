@@ -2,18 +2,18 @@ import db from "@/lib/db";
 import LeftSidebar from "@/components/LeftSidebar";
 import RightSidebar from "@/components/RightSidebar";
 import Footer from "@/components/Footer";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { Bell, Heart, MessageSquare, UserCheck, Inbox, ShieldAlert, ArrowLeft } from "lucide-react";
 import { markNotificationsAsRead } from "@/lib/actions/notifications";
+import { getCurrentUserId } from "@/lib/session";
+import { logServerError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
-  const session = await getServerSession(authOptions);
+  const userId = await getCurrentUserId();
 
-  if (!session || !session.user) {
+  if (!userId) {
     return (
       <div className="p-8 text-center bg-white dark:bg-[#1b2631] rounded board-container max-w-lg mx-auto my-12 text-xs">
         <h3 className="font-bold text-red-600 text-sm mb-2">Authentication Required</h3>
@@ -27,7 +27,7 @@ export default async function NotificationsPage() {
   try {
     await db.notification.updateMany({
       where: {
-        userId: session.user.id,
+        userId,
         isRead: false,
       },
       data: {
@@ -35,23 +35,30 @@ export default async function NotificationsPage() {
       },
     });
   } catch (err) {
-    console.error("Failed to mark notifications read on load:", err);
+    logServerError("NotificationsPage.markRead", err);
   }
 
   // Query notifications
-  const notifications = await db.notification.findMany({
-    where: { userId: session.user.id },
-    include: {
-      sender: {
-        select: {
-          username: true,
-          avatarUrl: true,
+  let notifications: any[] = [];
+  let loadError = false;
+  try {
+    notifications = await db.notification.findMany({
+      where: { userId },
+      include: {
+        sender: {
+          select: {
+            username: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-  });
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
+  } catch (error) {
+    loadError = true;
+    logServerError("NotificationsPage.notifications", error);
+  }
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -161,7 +168,9 @@ export default async function NotificationsPage() {
                 })
               ) : (
                 <div className="p-12 text-center text-xs text-slate-500">
-                  You do not have any notification alerts on your dashboard index.
+                  {loadError
+                    ? "Notifications could not be loaded right now. Please refresh in a moment."
+                    : "You do not have any notification alerts on your dashboard index."}
                 </div>
               )}
             </div>
