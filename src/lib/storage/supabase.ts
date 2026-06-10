@@ -23,9 +23,9 @@ function isSupabasePublicUrl(fileUrl: string) {
 
   return Boolean(
     config &&
-      fileUrl.startsWith(
-        `${config.url}/storage/v1/object/public/${config.bucket}/`
-      )
+    fileUrl.startsWith(
+      `${config.url}/storage/v1/object/public/${config.bucket}/`
+    )
   );
 }
 
@@ -54,14 +54,13 @@ export class SupabaseStorageAdapter implements StorageAdapter {
         "cache-control": "3600",
         "x-upsert": "true",
       },
-      body: buffer,
+      body: new Uint8Array(buffer),
     });
 
     if (!response.ok) {
       const message = await response.text();
       throw new Error(
-        `Supabase upload failed (${response.status}): ${
-          message || response.statusText
+        `Supabase upload failed (${response.status}): ${message || response.statusText
         }`
       );
     }
@@ -92,8 +91,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     if (!response.ok && response.status !== 404) {
       const message = await response.text();
       throw new Error(
-        `Supabase delete failed (${response.status}): ${
-          message || response.statusText
+        `Supabase delete failed (${response.status}): ${message || response.statusText
         }`
       );
     }
