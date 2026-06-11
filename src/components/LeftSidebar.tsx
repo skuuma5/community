@@ -47,7 +47,7 @@ export default function LeftSidebar() {
   }, [session]);
 
   return (
-    <aside className="w-full md:w-56 flex flex-col space-y-4">
+    <aside className="w-full md:w-56 flex flex-col space-y-4 order-last md:order-none">
       {/* 1. Retro User Panel (If logged in) */}
       {session ? (
         <div className="board-container rounded">
@@ -107,6 +107,9 @@ export default function LeftSidebar() {
           </Link>
           <Link href="/forums" className="flex items-center px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-[#e6eff6] dark:hover:bg-[#223141]">
             <Compass className="w-4 h-4 mr-2 text-[#105289]" /> All Communities
+          </Link>
+          <Link href="/search" className="flex items-center px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-[#e6eff6] dark:hover:bg-[#223141]">
+            <Search className="w-4 h-4 mr-2 text-[#105289]" /> Search Board
           </Link>
           {session && (
             <>

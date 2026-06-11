@@ -137,21 +137,6 @@ function LoginForm() {
         </form>
       </div>
 
-      {/* Demo helper */}
-      <div className="board-container rounded bg-amber-50 dark:bg-[#1f2324] border-amber-300 dark:border-amber-950 p-3.5 text-xs leading-relaxed space-y-2">
-        <h4 className="font-bold text-amber-800 dark:text-amber-400 flex items-center">
-          <ShieldAlert className="w-4 h-4 mr-1 text-amber-600" /> Seeding Demo Accounts (Test Logs):
-        </h4>
-        <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          You can use any of the seeded forum accounts to instantly test Retrolink. Password for all: <strong className="text-amber-700 dark:text-amber-300 font-mono">password123</strong>
-        </p>
-        <ul className="list-disc pl-5 text-[11px] space-y-1 text-slate-600 dark:text-slate-400 font-mono">
-          <li><strong>ModeratorBob</strong> (Site Admin, 250 rep)</li>
-          <li><strong>CSS_Wizard_2010</strong> (Web Dev, 180 rep)</li>
-          <li><strong>WinampLover</strong> (Tech Mod, 95 rep)</li>
-          <li><strong>xX_TrollFace_Xx</strong> (Troll account, -15 rep)</li>
-        </ul>
-      </div>
     </div>
   );
 }

@@ -56,7 +56,7 @@ export default function RightSidebar() {
   }, []);
 
   return (
-    <aside className="w-full md:w-56 flex flex-col space-y-4">
+    <aside className="w-full md:w-56 flex flex-col space-y-4 order-last md:order-none">
       {/* 1. Trending Communities */}
       <div className="board-container rounded">
         <div className="glossy-header text-xs py-1.5 flex items-center">

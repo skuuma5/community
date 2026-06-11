@@ -109,13 +109,30 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <div className="flex-1 flex flex-col min-w-0 space-y-4">
           
           {/* Summary Box */}
-          <div className="board-container rounded bg-white dark:bg-[#1b2631] p-4 text-xs">
+          <div className="board-container rounded bg-white dark:bg-[#1b2631] p-4 text-xs space-y-3">
             <h2 className="font-bold text-sm text-[#105289] dark:text-[#4a90e2] flex items-center mb-1.5">
-              <Search className="w-4 h-4 mr-1 text-[#105289]" /> Retrolink Search Results
+              <Search className="w-4 h-4 mr-1 text-[#105289]" /> Retrolink Search Engine
             </h2>
-            <p className="text-slate-500">
-              Your search for &quot;<strong className="text-slate-800 dark:text-slate-200 font-mono">{query}</strong>&quot; returned the following matched categories, posts, and registered users.
-            </p>
+            <form action="/search" method="GET" className="flex items-center">
+              <input
+                type="text"
+                name="q"
+                defaultValue={query}
+                placeholder="Search forums, posts, users..."
+                className="bg-white dark:bg-[#1a2530] text-slate-800 dark:text-slate-200 text-xs px-2.5 py-1.5 rounded-l border border-slate-400 dark:border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#105289] flex-1 shadow-inner"
+              />
+              <button
+                type="submit"
+                className="retro-btn py-1.5 px-4 rounded-r rounded-l-none"
+              >
+                Search
+              </button>
+            </form>
+            {query && (
+              <p className="text-slate-500 text-[11px] pt-1">
+                Your search for &quot;<strong className="text-slate-800 dark:text-slate-200 font-mono">{query}</strong>&quot; returned the following matched categories, posts, and registered users.
+              </p>
+            )}
           </div>
 
           {/* 1. Matched Forums */}

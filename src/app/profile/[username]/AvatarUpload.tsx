@@ -11,8 +11,8 @@ interface AvatarUploadProps {
   username: string;
 }
 
-/** Max file size: 2 MB */
-const MAX_SIZE = 2 * 1024 * 1024;
+/** Max file size (original): 15 MB (resized before upload) */
+const MAX_SIZE = 15 * 1024 * 1024;
 
 /** Accepted MIME types */
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -83,7 +83,7 @@ export default function AvatarUpload({ currentAvatarUrl, username }: AvatarUploa
       return;
     }
     if (file.size > MAX_SIZE) {
-      setError("Image must be under 2 MB.");
+      setError("Image must be under 15 MB.");
       return;
     }
 

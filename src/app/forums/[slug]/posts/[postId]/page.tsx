@@ -4,7 +4,7 @@ import RightSidebar from "@/components/RightSidebar";
 import Footer from "@/components/Footer";
 import CommentNode from "@/components/CommentNode";
 import { incrementPostViews } from "@/lib/actions/posts";
-import { createComment } from "@/lib/actions/comments";
+import CommentComposer from "@/components/CommentComposer";
 import { MessageSquare, Flame, ImageIcon, ExternalLink, ShieldAlert, Reply, AlertCircle, Eye, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import PostActionsPanel from "./PostActionsPanel";
@@ -277,33 +277,7 @@ export default async function PostPage({ params }: PostPageProps) {
 
           {/* Add Reply Composer (Bottom page) */}
           {userId ? (
-            <div className="board-container rounded overflow-hidden">
-              <div className="glossy-header text-xs py-1.5 flex items-center">
-                <Reply className="w-3.5 h-3.5 mr-1" /> Post a Reply to this Thread
-              </div>
-              <form action={createComment as unknown as (formData: FormData) => void} className="p-3 bg-white dark:bg-[#1b2631] space-y-3">
-                <input type="hidden" name="postId" value={post.id} />
-                
-                <div className="flex flex-col space-y-1 text-xs">
-                  <label className="font-bold text-slate-600 dark:text-slate-400">Write your reply message:</label>
-                  <textarea
-                    name="content"
-                    placeholder="Enter your message here... standard forum guidelines apply. Be polite."
-                    className="w-full text-xs p-2 bg-white dark:bg-[#1a2530] text-slate-800 dark:text-slate-200 rounded border border-slate-400 dark:border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#105289] h-28 shadow-inner"
-                    required
-                  />
-                </div>
-
-                <div className="flex items-center justify-end">
-                  <button
-                    type="submit"
-                    className="retro-btn-green py-1.5 px-4 cursor-pointer"
-                  >
-                    Post Message
-                  </button>
-                </div>
-              </form>
-            </div>
+            <CommentComposer postId={post.id} />
           ) : (
             <div className="board-container rounded p-4 bg-amber-50 dark:bg-[#201c18] border-amber-300 dark:border-amber-950 text-center text-xs space-y-2">
               <p className="text-slate-600 dark:text-slate-300">

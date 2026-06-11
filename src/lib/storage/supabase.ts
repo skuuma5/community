@@ -54,7 +54,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
         "cache-control": "3600",
         "x-upsert": "true",
       },
-      body: new Uint8Array(buffer),
+      body: new Blob([buffer], { type: contentType }),
     });
 
     if (!response.ok) {
